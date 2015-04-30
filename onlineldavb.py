@@ -22,7 +22,7 @@ from scipy.special import gammaln, psi
 
 import corpus
 
-n.random.seed(100000001)
+n.random.seed(7) #100000001)
 meanchangethresh = 0.001
 
 def dirichlet_expectation(alpha):
@@ -132,7 +132,7 @@ class OnlineLDA:
 
         # Initialize the variational distribution q(theta|gamma) for
         # the mini-batch
-        gamma = 1*n.random.gamma(100., 1./100., (batchD, self._K))
+        gamma = n.ones((batchD, self._K)) #1*n.random.gamma(100., 1./100., (batchD, self._K))
         Elogtheta = dirichlet_expectation(gamma)
         expElogtheta = n.exp(Elogtheta)
 
@@ -141,7 +141,7 @@ class OnlineLDA:
         it = 0
         meanchange = 0
         for d in range(0, batchD):
-            print sum(wordcts[d])
+            # print sum(wordcts[d])
             # These are mostly just shorthand (but might help cache locality)
             ids = wordids[d]
             cts = wordcts[d]
@@ -160,7 +160,7 @@ class OnlineLDA:
                 # the update for gamma gives this update. Cf. Lee&Seung 2001.
                 gammad = self._alpha + expElogthetad * \
                     n.dot(cts / phinorm, expElogbetad.T)
-                print gammad[:, n.newaxis]
+                # print gammad[:, n.newaxis]
                 Elogthetad = dirichlet_expectation(gammad)
                 expElogthetad = n.exp(Elogthetad)
                 phinorm = n.dot(expElogthetad, expElogbetad) + 1e-100
@@ -471,5 +471,77 @@ def main():
 #     infile = open(infile)
 #     corpus.read_stream_data(infile, 100000)
 
+def main2():
+    D = 6
+    # The number of topics
+    K = 2
+
+    # Our vocabulary
+    vocab = file('/home/yuhao/workspace/DocSet/apple/wordsEn.txt').readlines()
+    W = len(vocab)
+
+    # Initialize the algorithm with alpha=1/K, eta=1/K, tau_0=1024, kappa=0.7
+    olda = OnlineLDA(vocab, K, D, 0.01, 0.01, 1024.0, 0.7)
+    # Run until we've seen D documents. (Feel free to interrupt *much*
+    # sooner than this.)
+
+    docsets = file('/home/yuhao/workspace/DocSet/apple/together.data').readlines()
+
+
+    for iteration in range(0, 100):
+
+          dicset = docsets
+          (wordids, wordcts) = parse_doc_list(docsets, olda._vocab)
+          # Give them to online LDA
+          (gamma, bound) = olda.update_lambda(wordids, wordcts)
+          # Compute an estimate of held-out perplexity
+
+          # perwordbound = bound * len(docsets) / (D * sum(map(sum, wordcts)))
+          # print '%d:  rho_t = %f,  held-out perplexity estimate = %f' % \
+          #       (iteration, olda._rhot, n.exp(-perwordbound))
+
+
+    print (olda._lambda)
+
+
+
+def main3():
+
+    D = 2
+    # The number of topics
+    K = 2
+
+    # Our vocabulary
+    vocab = file('/home/yuhao/workspace/DocSet/apple/wordsEn.txt').readlines()
+    W = len(vocab)
+
+    # Initialize the algorithm with alpha=1/K, eta=1/K, tau_0=1024, kappa=0.7
+    olda = OnlineLDA(vocab, K, D, 0.5, 0.5, 1023.0, 0.51)
+    # Run until we've seen D documents. (Feel free to interrupt *much*
+    # sooner than this.)
+
+    docsets = file('/home/yuhao/workspace/DocSet/apple/main3.data').readlines()
+    #
+    flambda = n.matrix([[1.1, 1.2],[1.3, 0.9],[0.8, 0.7],[0.9, 0.8],[0.7, 1.1],[1.2, 1.3]]).getA().reshape((2, 6))
+    print(flambda)
+    olda._lambda = flambda
+    olda._Elogbeta = dirichlet_expectation(olda._lambda)
+    olda._expElogbeta = n.exp(olda._Elogbeta)
+
+
+    for iteration in range(0, 1):
+
+          dicset = docsets
+          (wordids, wordcts) = parse_doc_list(docsets, olda._vocab)
+          # Give them to online LDA
+          (gamma, bound) = olda.update_lambda(wordids, wordcts)
+          # Compute an estimate of held-out perplexity
+
+          # perwordbound = bound * len(docsets) / (D * sum(map(sum, wordcts)))
+          # print '%d:  rho_t = %f,  held-out perplexity estimate = %f' % \
+          #       (iteration, olda._rhot, n.exp(-perwordbound))
+    print (olda._lambda)
+
+
 if __name__ == '__main__':
-    main()
+    main3()
